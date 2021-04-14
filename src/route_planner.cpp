@@ -49,7 +49,7 @@ void RoutePlanner::AddNeighbors(RouteModel::Node *current_node)
     }
 }
 
-bool RoutePlanner::Compare(const RouteModel::Node& a, const RouteModel::Node& b) const
+bool RoutePlanner::Compare(RouteModel::Node a, RouteModel::Node b)
 {
     float a_fVal = a.g_value + a.h_value;
     float b_fVal = b.h_value + a.g_value;
@@ -64,7 +64,11 @@ bool RoutePlanner::Compare(const RouteModel::Node& a, const RouteModel::Node& b)
 // - Return the pointer.
 RouteModel::Node *RoutePlanner::NextNode() 
 {
-    std::sort(open_list.begin(), open_list.end(), Compare); //change to lambda
+    std::sort(open_list.begin(), open_list.end(), [](RouteModel::Node* a, RouteModel::Node* b)
+    {
+        return a->g_value + a->h_value > b->g_value + b->h_value;
+    }); 
+    
     RouteModel::Node* current = open_list.back();
     open_list.pop_back();
     return current;
@@ -103,7 +107,8 @@ std::vector<RouteModel::Node> RoutePlanner::ConstructFinalPath(RouteModel::Node 
 // - When the search has reached the end_node, use the ConstructFinalPath method to return the final path that was found.
 // - Store the final path in the m_Model.path attribute before the method exits. This path will then be displayed on the map tile.
 
-void RoutePlanner::AStarSearch() {
+void RoutePlanner::AStarSearch() 
+{
     RouteModel::Node *current_node = nullptr;
 
     // TODO: Implement your solution here.
