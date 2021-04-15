@@ -1,5 +1,6 @@
 #include "route_planner.h"
 #include <algorithm>
+#include <cassert>
 
 RoutePlanner::RoutePlanner(RouteModel &model, float start_x, float start_y, float end_x, float end_y): m_Model(model) {
     // Convert inputs to percentage:
@@ -19,7 +20,6 @@ RoutePlanner::RoutePlanner(RouteModel &model, float start_x, float start_y, floa
 // Tips:
 // - You can use the distance to the end_node for the h value.
 // - Node objects have a distance method to determine the distance to another node.
-
 float RoutePlanner::CalculateHValue(RouteModel::Node const *node) const
 {
     return end_node->distance(*node);
@@ -34,26 +34,17 @@ float RoutePlanner::CalculateHValue(RouteModel::Node const *node) const
 void RoutePlanner::AddNeighbors(RouteModel::Node *current_node) 
 {
     current_node->FindNeighbors();
-    for(int i = 0; i < current_node->neighbors.size(); ++i)
+    for(auto neighbor : current_node->neighbors)
     {
-        if(current_node->neighbors[i]->visited == false)
+        if(neighbor->visited == false)
         {
-            RouteModel::Node& currentNodeNeighbor = *(current_node->neighbors[i]);
-
-            currentNodeNeighbor.visited = true;
-            currentNodeNeighbor.parent = current_node;
-            currentNodeNeighbor.g_value = current_node->distance(currentNodeNeighbor);
-            currentNodeNeighbor.h_value = CalculateHValue(current_node->neighbors[i]);
-            open_list.push_back(current_node->neighbors[i]);
+            neighbor->visited = true;
+            neighbor->parent = current_node;
+            neighbor->g_value = current_node->distance(*neighbor);
+            neighbor->h_value = CalculateHValue(neighbor);
+            open_list.push_back(neighbor);
         }
     }
-}
-
-bool RoutePlanner::Compare(RouteModel::Node a, RouteModel::Node b)
-{
-    float a_fVal = a.g_value + a.h_value;
-    float b_fVal = b.h_value + a.g_value;
-    return a_fVal > b_fVal;
 }
 
 // TODO 5: Complete the NextNode method to sort the open list and return the next node.
@@ -66,7 +57,7 @@ RouteModel::Node *RoutePlanner::NextNode()
 {
     std::sort(open_list.begin(), open_list.end(), [](RouteModel::Node* a, RouteModel::Node* b)
     {
-        return a->g_value + a->h_value > b->g_value + b->h_value;
+        return (a->g_value + a->h_value) > (b->g_value + b->h_value);
     }); 
     
     RouteModel::Node* current = open_list.back();
@@ -83,16 +74,20 @@ RouteModel::Node *RoutePlanner::NextNode()
 //   of the vector, the end node should be the last element.
 
 std::vector<RouteModel::Node> RoutePlanner::ConstructFinalPath(RouteModel::Node *current_node) {
+    //TODO: change vector to queue and push_front() so that we dont have to reverse the vector
+    
     // Create path_found vector
     distance = 0.0f;
     std::vector<RouteModel::Node> path_found;
 
     // TODO: Implement your solution here.
-    while((current_node != start_node) || (current_node->parent != nullptr))
+    while(true)
     {
-        distance += current_node->distance(*(current_node->parent));
         path_found.push_back(*current_node);
-        current_node = current_node->parent;
+        if(current_node->parent != nullptr)
+        {distance += current_node->distance(*(current_node->parent));
+        current_node = current_node->parent;}
+        else{break;}
     }
 
     distance *= m_Model.MetricScale(); // Multiply the distance by the scale of the map to get meters.
@@ -109,8 +104,21 @@ std::vector<RouteModel::Node> RoutePlanner::ConstructFinalPath(RouteModel::Node 
 
 void RoutePlanner::AStarSearch() 
 {
-    RouteModel::Node *current_node = nullptr;
+    RouteModel::Node *current_node = start_node;
+    current_node->visited = true;
+    open_list.push_back(current_node);
 
-    // TODO: Implement your solution here.
-
+    while(!open_list.empty())
+    {
+        if((current_node->x != end_node->x) && (current_node->y != end_node->y))
+        {
+           current_node = NextNode();
+           AddNeighbors(current_node);
+        }
+        else
+        {
+            m_Model.path = ConstructFinalPath(current_node);
+        }
+    }
+    assert(!"Couldn't find path");
 }
