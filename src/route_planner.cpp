@@ -42,7 +42,7 @@ void RoutePlanner::AddNeighbors(RouteModel::Node *current_node)
             neighbor->parent = current_node;
             neighbor->g_value = current_node->g_value + current_node->distance(*neighbor);
             neighbor->h_value = CalculateHValue(neighbor);
-            open_list.push_back(neighbor);
+            open_list.emplace_back(neighbor);
         }
     }
 }
